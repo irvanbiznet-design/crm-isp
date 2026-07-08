@@ -1,75 +1,75 @@
 version: '3.8'
+
 services:
   app:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-    container_name: crm-isp-app
+      dockerfile: Dockerfile
+    container_name: crm_isp_app
     restart: unless-stopped
-    working_dir: /app
+    working_dir: /var/www
     environment:
-      - DB_HOST=mysql
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
       - DB_PORT=3306
       - DB_DATABASE=crm_isp
-      - DB_USERNAME=crm_user
-      - DB_PASSWORD=secret123
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - DB_USERNAME=crm_isp
+      - DB_PASSWORD=password
+      - JWT_SECRET=crm-isp-secret-key
     volumes:
-      - ./:/app
-      - ./docker/php.ini:/usr/local/etc/php/php.ini
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+      - ./:/var/www
+    depends_on:
+      - db
+    networks:
+      - crm_isp
+
+  db:
+    image: mysql:8.0
+    container_name: crm_isp_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: crm_isp
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: password
+      MYSQL_USER: crm_isp
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - crm_isp
+
+  nginx:
+    image: nginx:alpine
+    container_name: crm_isp_nginx
+    restart: unless-stopped
     ports:
       - "8000:80"
-    networks:
-      - crm-network
-    depends_on:
-      - mysql
-      - redis
-
-  mysql:
-    image: mysql:8.0
-    container_name: crm-isp-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: crm_isp
-      MYSQL_USER: crm_user
-      MYSQL_PASSWORD: secret123
     volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - crm-network
-
-  redis:
-    image: redis:7-alpine
-    container_name: crm-isp-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    networks:
-      - crm-network
-
-  phpmyadmin:
-    image: phpmyadmin:5.2
-    container_name: crm-isp-phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_USER: crm_user
-      PMA_PASSWORD: secret123
-    ports:
-      - "8001:80"
-    networks:
-      - crm-network
+      - ./:/var/www
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
-      - mysql
+      - app
+    networks:
+      - crm_isp
+
+  frontend:
+    image: node:16-alpine
+    container_name: crm_isp_frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "8080:8080"
+    command: npm run serve
+    environment:
+      - VUE_APP_API_URL=http://localhost:8000/api
+    networks:
+      - crm_isp
 
 volumes:
-  mysql_data:
+  dbdata:
+    driver: local
 
 networks:
-  crm-network:
+  crm_isp:
     driver: bridge
