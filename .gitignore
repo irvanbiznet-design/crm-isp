@@ -1,0 +1,15 @@
+.env.example
+docker-compose.override.yml
+.DS_Store
+*.log
+node_modules/
+vendor/
+.env
+.env.local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cache/
+.phpunit.result.cache
