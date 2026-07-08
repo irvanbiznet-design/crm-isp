@@ -1,0 +1,75 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: crm-isp-app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=crm_isp
+      - DB_USERNAME=crm_user
+      - DB_PASSWORD=secret123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./docker/php.ini:/usr/local/etc/php/php.ini
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "8000:80"
+    networks:
+      - crm-network
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    container_name: crm-isp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: crm_isp
+      MYSQL_USER: crm_user
+      MYSQL_PASSWORD: secret123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - crm-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: crm-isp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - crm-network
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: crm-isp-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: crm_user
+      PMA_PASSWORD: secret123
+    ports:
+      - "8001:80"
+    networks:
+      - crm-network
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+
+networks:
+  crm-network:
+    driver: bridge
